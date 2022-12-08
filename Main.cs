@@ -1,4 +1,5 @@
-﻿using BepInEx;
+﻿using System.Runtime.CompilerServices;
+using BepInEx;
 using UnityEngine;
 using ItemManager;
 using HarmonyLib;
@@ -12,12 +13,13 @@ public class Main : BaseUnityPlugin
     void Awake()
     {
         Harmony harmony = new("GimmeDatGreatSword");
-        harmony.Patch(AccessTools.DeclaredMethod(typeof(ObjectDB), nameof(ObjectDB.CopyOtherDB)), prefix: new HarmonyMethod(AccessTools.DeclaredMethod(typeof(Main), nameof(CloneItems))));
+        harmony.Patch(AccessTools.DeclaredMethod(typeof(FejdStartup), nameof(FejdStartup.Awake)), prefix: new HarmonyMethod(AccessTools.DeclaredMethod(typeof(Main), nameof(CloneItems)), Priority.VeryHigh));
+        RuntimeHelpers.RunClassConstructor(typeof(PrefabManager).TypeHandle);
     }
 
-    public static void CloneItems(ObjectDB __instance, ObjectDB other)
+    public static void CloneItems(FejdStartup __instance)
     {
-        if(Main.cloningDone) return;
+        if (Main.cloningDone) return;
         Main.cloningDone = true;
 
         // create clone container
@@ -27,7 +29,7 @@ public class Main : BaseUnityPlugin
         var container = containerObj.transform;
 
         // get base greatsword prefab
-        var basePrefab = other.m_items.First(i => i.name.Equals("THSwordKrom", StringComparison.Ordinal));
+        var basePrefab = __instance.m_objectDBPrefab.GetComponent<ObjectDB>().m_items.First(i => i.name.Equals("THSwordKrom", StringComparison.Ordinal));
 
         // bronze
         Item bronze = new(CreateClone("GS_bronze"), false);
@@ -69,6 +71,8 @@ public class Main : BaseUnityPlugin
         silver.Description.English("Greatsword made from a large amount of silver");
         silver.SetMetalColor("#ffffff");
         silver.SetDamage(115, 10);
+        silver.Prefab.GetComponent<ItemDrop>().m_itemData.m_shared.m_damages.m_spirit = 45;
+        silver.Prefab.GetComponent<ItemDrop>().m_itemData.m_shared.m_damagesPerLevel.m_spirit = 7;
         silver.Snapshot();
 
         silver.Crafting.Add(CraftingTable.Forge, 0);
